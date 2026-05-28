@@ -14,8 +14,10 @@ This is how the directory structure should look in your main folder (e.g., on an
 ├── .env                  # (NOT TRACKED IN GIT) Actual environment variables and keys
 ├── .env-example          # Environment variables template
 ├── README.md             # Project documentation
+├── scheduler/            # Vaultwarden backup scheduler service (Docker image built locally)
+├── backups/              # Local backup destination (created automatically)
 ├── ts-data/              # Tailscale state (prevents duplicate devices on restart)
-└── vw-data/              # Main Vaultwarden database (db.sqlite3) and logs
+└── vw-data/              # Main Vaultwarden database (db.sqlite3) and keys
 ```
 
 ## 🚀 Deployment (First Run & HTTPS Setup)
@@ -65,15 +67,31 @@ This is how the directory structure should look in your main folder (e.g., on an
       docker compose up -d --force-recreate
       ```
 
-## 🚑 Disaster Recovery Runbook
+## 💾 Backup Service
 
-**Failure Scenario:** Your SD card or Raspberry Pi has completely failed/burned down, but you have a physical backup of the files from an external drive or the `~/homelab` directory.
+The `scheduler` container runs a Python-based backup scheduler daemon that automatically creates encrypted archives of all Vaultwarden data.
 
-**How to restore access to your passwords:**
+### What is backed up
 
-1. Install a fresh Raspberry Pi OS Lite on a new device and install Docker.
-2. Transfer the backed-up `homelab/` folder to the new device.
-3. Ensure that the `./vw-data` (containing your database) and `./ts-data` directories exist and their contents are intact.
-4. Run `docker compose up -d`.
+| File / Directory | Description                                           |
+|------------------|-------------------------------------------------------|
+| `db.sqlite3`     | Main Vaultwarden database (hot backup via SQLite API) |
+| `config.json`    | Vaultwarden configuration (if present)                |
+| `rsa_key*`       | RSA private/public keys                               |
+| `attachments/`   | File attachments (if present)                         |
+| `sends/`         | Send files (if present)                               |
 
-Because we preserved the `ts-data` folder, Tailscale will restore its previous identity. The server will automatically be assigned the exact same IP address in your Tailnet, and Vaultwarden will boot up using your existing SQLite database. No reconfiguration on your client devices is required.
+All items are packaged into a single **password-protected, header-encrypted `.7z` archive** named `backup.YYYY-MM-DD-HHMM.7z`.
+
+The backup scheduler daemon runs at **specific, customizable times of the day** (default: `02:00, 06:00, 10:00, 14:00, 18:00, 22:00`) and uploads the same archive to the appropriate retention tiers:
+
+- `daily/` — on every scheduled run
+- `weekly/` — additionally on the **first scheduled run** of the day on Mondays
+- `monthly/` — additionally on the **first scheduled run** of the day on the first day of each month
+
+### Storage backends
+
+The scheduler supports two storage backends, selected automatically based on the environment configuration:
+
+- **Local filesystem** *(default)* — archives are copied to the `./backups/` directory (mounted inside the container). Used when `S3_BUCKET` is **not** set.
+- **AWS S3** — archives are uploaded directly to an S3 bucket. Activated when `S3_BUCKET` is set.
