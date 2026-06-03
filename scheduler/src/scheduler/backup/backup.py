@@ -102,7 +102,7 @@ class VaultwardenArchiver:
         dest = temp_dir / f"db.{self.now_str}.sqlite3"
 
         logger.info("Creating SQLite backup: %s → %s", db_path, dest)
-        with closing(sqlite3.connect(db_path)) as src_conn, closing(sqlite3.connect(dest)) as dst_conn:
+        with closing(sqlite3.connect(db_path, timeout=30)) as src_conn, closing(sqlite3.connect(dest)) as dst_conn:
             src_conn.backup(dst_conn)
         logger.info("SQLite backup completed successfully")
 
