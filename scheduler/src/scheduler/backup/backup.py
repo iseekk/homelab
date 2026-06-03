@@ -9,7 +9,7 @@ from pathlib import Path
 
 import py7zr
 from mypy_boto3_s3.literals import BucketLocationConstraintType
-from pydantic import Field, computed_field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from scheduler.backends.base import StorageBackend
@@ -42,7 +42,7 @@ class BackupConfig(BaseSettings):
     backup_file_date_format: str = Field(default="%Y-%m-%d-%H%M", description="Date format used in backup file names")
 
     # Compression
-    archive_password: str | None = Field(default=None, description="Password for the archive")
+    archive_password: SecretStr | None = Field(default=None, description="Password for the archive")
 
     # Schedule
     backup_times: str = Field(
@@ -58,7 +58,7 @@ class BackupConfig(BaseSettings):
     s3_prefix: str = Field(default="vaultwarden", description="Key prefix inside the S3 bucket")
     s3_region: BucketLocationConstraintType = Field(default="eu-central-1", description="AWS region")
     aws_access_key_id: str | None = Field(default=None, description="AWS access key ID")
-    aws_secret_access_key: str | None = Field(default=None, description="AWS secret access key")
+    aws_secret_access_key: SecretStr | None = Field(default=None, description="AWS secret access key")
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -164,10 +164,13 @@ class VaultwardenArchiver:
 
         archive_path = temp_dir.parent / f"backup.{self.now_str}.7z"
 
+        password = self.config.archive_password.get_secret_value() if self.config.archive_password else None
+        if not password:
+            logger.warning("No archive password provided — creating unencrypted archive (not recommended)")
         with py7zr.SevenZipFile(
             file=archive_path,
             mode="w",
-            password=self.config.archive_password,
+            password=password,
             header_encryption=True,
         ) as archive:
             for file in sorted(temp_dir.iterdir()):

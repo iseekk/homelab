@@ -26,12 +26,14 @@ def schedule_backup_jobs() -> None:
     config = BackupConfig()
     backend: StorageBackend
     if config.s3_bucket:
+        if not config.aws_access_key_id or not config.aws_secret_access_key:
+            raise ValueError("AWS credentials must be provided when using S3 backend")
         backend = S3Backend(
             bucket=config.s3_bucket,
             prefix=config.s3_prefix,
             region=config.s3_region,
             access_key_id=config.aws_access_key_id,
-            secret_access_key=config.aws_secret_access_key,
+            secret_access_key=config.aws_secret_access_key.get_secret_value(),
         )
         logger.info("Backend: AWS S3 (s3://%s/%s)", config.s3_bucket, config.s3_prefix)
     else:
