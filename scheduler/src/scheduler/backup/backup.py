@@ -60,32 +60,26 @@ class BackupConfig(BaseSettings):
     aws_access_key_id: str | None = Field(default=None, description="AWS access key ID")
     aws_secret_access_key: SecretStr | None = Field(default=None, description="AWS secret access key")
 
-    @computed_field  # type: ignore[prop-decorator]
     @property
     def resolved_data_db(self) -> Path:
         return self.data_db or self.data_dir / "db.sqlite3"
 
-    @computed_field  # type: ignore[prop-decorator]
     @property
     def resolved_data_config(self) -> Path:
         return self.data_dir / "config.json"
 
-    @computed_field  # type: ignore[prop-decorator]
     @property
     def resolved_data_rsakey(self) -> Path:
         return self.data_rsakey or self.data_dir / "rsa_key"
 
-    @computed_field  # type: ignore[prop-decorator]
     @property
     def resolved_data_attachments(self) -> Path:
         return self.data_attachments or self.data_dir / "attachments"
 
-    @computed_field  # type: ignore[prop-decorator]
     @property
     def resolved_data_sends(self) -> Path:
         return self.data_sends or self.data_dir / "sends"
 
-    @computed_field  # type: ignore[prop-decorator]
     @property
     def resolved_backup_times(self) -> list[str]:
         return [t.strip() for t in self.backup_times.split(",") if t.strip()]
