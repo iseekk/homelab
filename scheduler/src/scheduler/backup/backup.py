@@ -152,12 +152,12 @@ class VaultwardenArchiver:
 
     def package(self, temp_dir: Path) -> Path | None:
         """Package files from temp_dir into a password-protected 7z archive with header encryption."""
-        if not any(temp_dir.iterdir()):
+        files_to_archive = list(temp_dir.iterdir())
+        if not files_to_archive:
             logger.warning("No files to archive in temporary directory: %s — skipping archive creation", temp_dir)
             return None
 
-        archive_path = temp_dir.parent / f"backup.{self.now_str}.7z"
-
+        archive_path = temp_dir / f"backup.{self.now_str}.7z"
         password = self.config.archive_password.get_secret_value() if self.config.archive_password else None
         if not password:
             logger.warning("No archive password provided — creating unencrypted archive (not recommended)")
@@ -167,7 +167,7 @@ class VaultwardenArchiver:
             password=password,
             header_encryption=True,
         ) as archive:
-            for file in sorted(temp_dir.iterdir()):
+            for file in files_to_archive:
                 if file.is_file():
                     archive.write(file, arcname=file.name)
                     logger.debug("Added to 7z: %s", file.name)
