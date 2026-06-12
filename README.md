@@ -81,7 +81,7 @@ The `scheduler` container runs a Python-based backup scheduler daemon that autom
 | `attachments/`   | File attachments (if present)                         |
 | `sends/`         | Send files (if present)                               |
 
-All items are packaged into a single **password-protected, header-encrypted `.7z` archive** named `backup.YYYY-MM-DD-HHMM.7z`.
+All items are packaged into a single `.7z` archive named `backup.YYYY-MM-DD-HHMM.7z`. When the `ARCHIVE_PASSWORD` environment variable is set, the archive is **password-protected and header-encrypted**. Without it, an unencrypted archive is created (not recommended).
 
 The backup scheduler daemon runs at **specific, customizable times of the day** (default: `02:00, 06:00, 10:00, 14:00, 18:00, 22:00`) and uploads the same archive to the appropriate retention tiers:
 
@@ -93,5 +93,5 @@ The backup scheduler daemon runs at **specific, customizable times of the day** 
 
 The scheduler supports two storage backends, selected automatically based on the environment configuration:
 
-- **Local filesystem** *(default)* — archives are copied to the `./backups/` directory (mounted inside the container). Used when `S3_BUCKET` is **not** set.
+- **Local filesystem** *(default)* — archives are stored in subdirectories `./backups/daily/`, `./backups/weekly/`, and `./backups/monthly/` (the `./backups/` directory is mounted inside the container). Used when `S3_BUCKET` is **not** set.
 - **AWS S3** — archives are uploaded directly to an S3 bucket. Activated when `S3_BUCKET` is set.
