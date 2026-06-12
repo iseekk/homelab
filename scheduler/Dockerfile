@@ -29,4 +29,4 @@ ENTRYPOINT []
 
 USER nonroot
 
-CMD ["python", "-m", "src.scheduler.main"]
+CMD ["python", "-m", "scheduler.main"]
