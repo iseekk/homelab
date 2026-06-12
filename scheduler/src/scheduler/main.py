@@ -53,7 +53,7 @@ def schedule_backup_jobs() -> None:
 
 
 def main() -> None:
-    """Main entry point: set up logging, schedule jobs, and run the scheduler loop."""
+    """Set up logging, schedule jobs, and run the scheduler loop."""
     setup_logging()
     schedule_backup_jobs()
 

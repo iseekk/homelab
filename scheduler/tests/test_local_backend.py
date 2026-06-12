@@ -2,7 +2,6 @@ from pathlib import Path
 
 from scheduler.backends.local import LocalFilesystemBackend
 
-
 # -- __init__ --
 
 

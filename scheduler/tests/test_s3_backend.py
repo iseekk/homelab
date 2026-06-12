@@ -6,7 +6,6 @@ from pytest_mock import MockerFixture
 
 from scheduler.backends.s3 import S3Backend
 
-
 # --- __init__ ---
 
 

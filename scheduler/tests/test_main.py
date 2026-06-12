@@ -1,10 +1,9 @@
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
 
-from scheduler.main import schedule_backup_jobs, main
+from scheduler.main import main, schedule_backup_jobs
 
 
 @pytest.fixture
@@ -20,7 +19,7 @@ def mock_config(mocker: MockerFixture) -> MagicMock:
 # -- schedule_backup_jobs --
 
 
-def test_schedule_backup_jobs_raises_without_credentials(mock_config: Any) -> None:
+def test_schedule_backup_jobs_raises_without_credentials(mock_config: MagicMock) -> None:
     mock_config.s3_bucket = "my-bucket"
     mock_config.aws_access_key_id = None
     mock_config.aws_secret_access_key = None
@@ -28,7 +27,7 @@ def test_schedule_backup_jobs_raises_without_credentials(mock_config: Any) -> No
         schedule_backup_jobs()
 
 
-def test_schedule_backup_jobs_uses_s3_backend(mock_config: Any, mocker: MockerFixture) -> None:
+def test_schedule_backup_jobs_uses_s3_backend(mock_config: MagicMock, mocker: MockerFixture) -> None:
     mock_config.s3_bucket = "my-bucket"
     mock_config.aws_access_key_id = "KEY"
     mock_config.aws_secret_access_key.get_secret_value.return_value = "SECRET"
@@ -40,7 +39,7 @@ def test_schedule_backup_jobs_uses_s3_backend(mock_config: Any, mocker: MockerFi
     mock_s3.assert_called_once()
 
 
-def test_schedule_backup_jobs_uses_local_backend(mock_config: Any, mocker: MockerFixture) -> None:
+def test_schedule_backup_jobs_uses_local_backend(mock_config: MagicMock, mocker: MockerFixture) -> None:
     mock_local = mocker.patch("scheduler.main.LocalFilesystemBackend")
     mocker.patch("scheduler.main.schedule")
 
@@ -49,7 +48,7 @@ def test_schedule_backup_jobs_uses_local_backend(mock_config: Any, mocker: Mocke
     mock_local.assert_called_once()
 
 
-def test_schedule_backup_jobs_schedules_one_job_per_time(mock_config: Any, mocker: MockerFixture) -> None:
+def test_schedule_backup_jobs_schedules_one_job_per_time(mock_config: MagicMock, mocker: MockerFixture) -> None:
     mock_config.resolved_backup_times = ["02:00", "06:00", "14:00"]
     mocker.patch("scheduler.main.LocalFilesystemBackend")
     mock_schedule = mocker.patch("scheduler.main.schedule")
@@ -59,7 +58,7 @@ def test_schedule_backup_jobs_schedules_one_job_per_time(mock_config: Any, mocke
     assert mock_schedule.every.return_value.day.at.return_value.do.call_count == 3
 
 
-def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: Any, mocker: MockerFixture) -> None:
+def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: MagicMock, mocker: MockerFixture) -> None:
     # sorted: 02:00 first → include_extended=True; 06:00, 14:00 → False
     mock_config.resolved_backup_times = ["06:00", "02:00", "14:00"]
     mocker.patch("scheduler.main.LocalFilesystemBackend")

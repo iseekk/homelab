@@ -17,9 +17,8 @@ from scheduler.backup.backup import (
     run_backup,
 )
 
-FROZEN_NOW = "2026-06-12 12:00:00"  # Wednesday, 3rd day of month
+FROZEN_NOW = "2026-06-12 12:00:00"  # Friday, 12th day of month
 FROZEN_DT = datetime(2026, 6, 12, 12, 0, 0)
-NOW_STR = "2025-06-12-1200"
 
 
 def make_config(tmp_path: Path, **overrides: object) -> BackupConfig:
