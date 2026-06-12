@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY pyproject.toml uv.lock /app/
 
-COPY ./src/scheduler /app/scheduler
+COPY ./src /app/src
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
@@ -29,4 +29,4 @@ ENTRYPOINT []
 
 USER nonroot
 
-CMD ["uv", "run", "python", "-m", "scheduler.main"]
+CMD ["python", "-m", "src.scheduler.main"]
