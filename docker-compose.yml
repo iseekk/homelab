@@ -5,16 +5,17 @@ x-base: &base
     driver: "json-file"
     options:
       max-size: "5m"
-      max-file: "3"
+      max-file: "2"
 
 services:
   tailscale:
     <<: *base
-    image: tailscale/tailscale:v1.98.3
+    image: tailscale/tailscale:v1.98.4
     container_name: tailscale
     hostname: homelab
     volumes:
       - ./ts-data:/var/lib/tailscale
+    devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
@@ -29,3 +30,15 @@ services:
       - ./vw-data:/data
     depends_on:
       - tailscale
+
+  scheduler:
+    <<: *base
+    build:
+      context: ./scheduler
+      dockerfile: Dockerfile
+    container_name: scheduler
+    volumes:
+      - ./vw-data:/data:ro
+      - ./backups:/app/backups
+    depends_on:
+      - vaultwarden
