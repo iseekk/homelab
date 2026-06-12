@@ -165,7 +165,7 @@ class VaultwardenArchiver:
             file=archive_path,
             mode="w",
             password=password,
-            header_encryption=True,
+            header_encryption=password is not None,
         ) as archive:
             for file in files_to_archive:
                 if file.is_file():
