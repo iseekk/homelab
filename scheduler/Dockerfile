@@ -1,5 +1,5 @@
 # Based on https://github.com/astral-sh/uv-docker-example
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:d9fb7d2b1c1922d191f1f77cb68b119c0a231f876f3affcce9bfac86e564c20a
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim@sha256:bebc7d6de6dd015a483903461eaedea12805728be6f9a044ca7106a2f7e11ddf
 
 RUN groupadd --system --gid 1000 nonroot \
  && useradd --system --gid 1000 --uid 1000 --create-home nonroot
