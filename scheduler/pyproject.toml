@@ -5,7 +5,7 @@ description = "Automated Vaultwarden backup scheduler."
 requires-python = ">=3.14"
 dependencies = [
     "boto3==1.43.28",
-    "boto3-stubs[s3]==1.43.28",
+    "boto3-stubs[s3]==1.43.37",
     "pydantic==2.13.4",
     "pydantic-settings==2.14.1",
     "py7zr==1.1.0",
