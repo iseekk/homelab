@@ -2,5 +2,26 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "timezone": "Europe/Warsaw",
+  "schedule": ["every weekend"],
+  "minimumReleaseAge": "7 days",
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Docker (minor & patch)"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "groupName": "Python Dependencies"
+    },
+    {
+      "matchPackageNames": ["vaultwarden/server"],
+      "groupName": "Vaultwarden"
+    }
   ]
 }
