@@ -10,7 +10,7 @@ x-base: &base
 services:
   tailscale:
     <<: *base
-    image: tailscale/tailscale:v1.98.9
+    image: tailscale/tailscale:v1.98.10
     container_name: tailscale
     hostname: homelab
     volumes:
@@ -23,7 +23,7 @@ services:
 
   vaultwarden:
     <<: *base
-    image: vaultwarden/server:1.36.0
+    image: vaultwarden/server:1.37.1
     container_name: vaultwarden
     network_mode: "service:tailscale"
     volumes:
