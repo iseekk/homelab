@@ -10,7 +10,7 @@ x-base: &base
 services:
   tailscale:
     <<: *base
-    image: tailscale/tailscale:v1.102.2
+    image: tailscale/tailscale:v1.102.3
     container_name: tailscale
     hostname: homelab
     volumes:
