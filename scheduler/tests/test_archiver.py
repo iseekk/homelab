@@ -207,9 +207,9 @@ def test_package_creates_encrypted_archive(tmp_path: Path) -> None:
 @freeze_time(FROZEN_NOW)
 def test_run_backup_raises_when_data_dir_missing(mocker: MockerFixture, tmp_path: Path) -> None:
     config = make_config(tmp_path)  # data_dir not created
-    backend = mocker.MagicMock()
+    storage = mocker.MagicMock()
     with pytest.raises(FileNotFoundError, match="Data directory does not exist"):
-        run_backup(config, backend, include_extended=False)
+        run_backup(config, storage, include_extended=False)
 
 
 @freeze_time("2026-06-01 12:00:00")  # Monday AND 1st of month → daily + weekly + monthly
@@ -219,11 +219,11 @@ def test_run_backup_uploads_for_each_sub_dir(mocker: MockerFixture, tmp_path: Pa
     (data_dir / "db.sqlite3").write_bytes(b"")
 
     config = make_config(tmp_path, archive_password=None)
-    backend = mocker.MagicMock()
+    storage = mocker.MagicMock()
 
-    run_backup(config, backend, include_extended=True)
+    run_backup(config, storage, include_extended=True)
 
-    call_remote_names = [call.kwargs["remote_name"] for call in backend.upload.call_args_list]
+    call_remote_names = [call.kwargs["remote_name"] for call in storage.upload.call_args_list]
     assert any(n.startswith("daily/") for n in call_remote_names)
     assert any(n.startswith("weekly/") for n in call_remote_names)
     assert any(n.startswith("monthly/") for n in call_remote_names)
@@ -236,8 +236,8 @@ def test_run_backup_no_upload_when_nothing_collected(mocker: MockerFixture, tmp_
     # no files → package returns None
 
     config = make_config(tmp_path)
-    backend = mocker.MagicMock()
+    storage = mocker.MagicMock()
 
-    run_backup(config, backend, include_extended=False)
+    run_backup(config, storage, include_extended=False)
 
-    backend.upload.assert_not_called()
+    storage.upload.assert_not_called()

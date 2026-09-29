@@ -7,7 +7,7 @@ from pydantic import SecretStr
 from pytest_mock import MockerFixture
 
 from scheduler.backup.config import BackupConfig
-from scheduler.main import create_job_monitor, create_storage_backend, main, schedule_backup_jobs
+from scheduler.main import create_job_monitor, create_storage, main, schedule_backup_jobs
 
 
 def make_config(**overrides: object) -> BackupConfig:
@@ -28,20 +28,20 @@ def mock_config(mocker: MockerFixture) -> MagicMock:
     return config
 
 
-# -- create_storage_backend --
+# -- create_storage --
 
 
-def test_create_storage_backend_raises_without_credentials() -> None:
+def test_create_storage_raises_without_credentials() -> None:
     config = make_config(
         s3_bucket="my-bucket",
         aws_access_key_id=None,
         aws_secret_access_key=None,
     )
-    with pytest.raises(ValueError, match="AWS credentials must be provided when using S3 backend"):
-        create_storage_backend(config)
+    with pytest.raises(ValueError, match="AWS credentials must be provided when using S3 storage"):
+        create_storage(config)
 
 
-def test_create_storage_backend_uses_s3(mocker: MockerFixture) -> None:
+def test_create_storage_uses_s3(mocker: MockerFixture) -> None:
     config = make_config(
         s3_bucket="my-bucket",
         s3_prefix="vaultwarden",
@@ -49,9 +49,9 @@ def test_create_storage_backend_uses_s3(mocker: MockerFixture) -> None:
         aws_access_key_id="KEY",
         aws_secret_access_key=SecretStr("SECRET"),
     )
-    mock_s3 = mocker.patch("scheduler.main.S3Backend")
+    mock_s3 = mocker.patch("scheduler.main.S3Storage")
 
-    create_storage_backend(config)
+    create_storage(config)
 
     mock_s3.assert_called_once_with(
         bucket="my-bucket",
@@ -62,11 +62,11 @@ def test_create_storage_backend_uses_s3(mocker: MockerFixture) -> None:
     )
 
 
-def test_create_storage_backend_uses_local(mocker: MockerFixture) -> None:
+def test_create_storage_uses_local(mocker: MockerFixture) -> None:
     config = make_config(local_backup_dir=Path("/tmp/backups"))
-    mock_local = mocker.patch("scheduler.main.LocalFilesystemBackend")
+    mock_local = mocker.patch("scheduler.main.LocalFilesystemStorage")
 
-    create_storage_backend(config)
+    create_storage(config)
 
     mock_local.assert_called_once_with(remote_dir=Path("/tmp/backups"))
 
@@ -95,20 +95,20 @@ def test_create_job_monitor_uses_noop(mocker: MockerFixture) -> None:
 # -- schedule_backup_jobs --
 
 
-def test_schedule_backup_jobs_creates_backend_and_monitor(mock_config: MagicMock, mocker: MockerFixture) -> None:
-    mock_create_backend = mocker.patch("scheduler.main.create_storage_backend")
+def test_schedule_backup_jobs_creates_storage_and_monitor(mock_config: MagicMock, mocker: MockerFixture) -> None:
+    mock_create_storage = mocker.patch("scheduler.main.create_storage")
     mock_create_monitor = mocker.patch("scheduler.main.create_job_monitor")
     mocker.patch("scheduler.main.schedule")
 
     schedule_backup_jobs()
 
-    mock_create_backend.assert_called_once_with(mock_config)
+    mock_create_storage.assert_called_once_with(mock_config)
     mock_create_monitor.assert_called_once_with(mock_config)
 
 
 def test_schedule_backup_jobs_schedules_one_job_per_time(mock_config: MagicMock, mocker: MockerFixture) -> None:
     mock_config.resolved_backup_times = ["02:00", "06:00", "14:00"]
-    mocker.patch("scheduler.main.create_storage_backend")
+    mocker.patch("scheduler.main.create_storage")
     mocker.patch("scheduler.main.create_job_monitor")
     mock_schedule = mocker.patch("scheduler.main.schedule")
 
@@ -120,7 +120,7 @@ def test_schedule_backup_jobs_schedules_one_job_per_time(mock_config: MagicMock,
 def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: MagicMock, mocker: MockerFixture) -> None:
     # sorted: 02:00 first → include_extended=True; 06:00, 14:00 → False
     mock_config.resolved_backup_times = ["06:00", "02:00", "14:00"]
-    mocker.patch("scheduler.main.create_storage_backend")
+    mocker.patch("scheduler.main.create_storage")
     mocker.patch("scheduler.main.create_job_monitor")
     mock_schedule = mocker.patch("scheduler.main.schedule")
 
@@ -133,7 +133,7 @@ def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: Magi
 
 
 def test_job_signals_success(mocker: MockerFixture, mock_config: MagicMock) -> None:
-    mocker.patch("scheduler.main.create_storage_backend")
+    mocker.patch("scheduler.main.create_storage")
     mocker.patch("scheduler.main.run_backup")
     mock_monitor = mocker.MagicMock()
     mocker.patch("scheduler.main.create_job_monitor", return_value=mock_monitor)
@@ -148,7 +148,7 @@ def test_job_signals_success(mocker: MockerFixture, mock_config: MagicMock) -> N
 
 
 def test_job_signals_failure(mocker: MockerFixture, mock_config: MagicMock) -> None:
-    mocker.patch("scheduler.main.create_storage_backend")
+    mocker.patch("scheduler.main.create_storage")
     mocker.patch("scheduler.main.run_backup", side_effect=RuntimeError("boom"))
     mock_monitor = mocker.MagicMock()
     mocker.patch("scheduler.main.create_job_monitor", return_value=mock_monitor)

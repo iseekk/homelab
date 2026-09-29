@@ -9,7 +9,7 @@ from pathlib import Path
 
 import py7zr
 
-from scheduler.backends.storage.base import StorageBackend
+from scheduler.backends.storage.base import Storage
 from scheduler.backup.config import BackupConfig
 
 logger = logging.getLogger(__name__)
@@ -119,8 +119,8 @@ def get_retention_sub_dirs(now: datetime, include_extended: bool) -> list[str]:
     return dirs
 
 
-def run_backup(config: BackupConfig, backend: StorageBackend, include_extended: bool) -> None:
-    """Run the backup process: create temporary area, collect files, package into archive, and upload to backend."""
+def run_backup(config: BackupConfig, storage: Storage, include_extended: bool) -> None:
+    """Run the backup process: create temporary area, collect files, package into archive, and upload to storage."""
     now = datetime.now()
     logger.info("=" * 38)
     logger.info("Starting backup at %s", now.strftime("%Y-%m-%d %H:%M:%S"))
@@ -148,7 +148,7 @@ def run_backup(config: BackupConfig, backend: StorageBackend, include_extended: 
             for sub_dir in sub_dirs:
                 remote_name = f"{sub_dir}/{archive_path.name}"
                 logger.info("Uploading file: %s", remote_name)
-                backend.upload(local_path=archive_path, remote_name=remote_name)
+                storage.upload(local_path=archive_path, remote_name=remote_name)
 
             logger.info("Upload completed successfully")
 

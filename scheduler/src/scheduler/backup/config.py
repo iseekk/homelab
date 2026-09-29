@@ -38,10 +38,10 @@ class BackupConfig(BaseSettings):
         description="Comma-separated list of times (HH:MM) to run the backup",
     )
 
-    # Local filesystem backend
+    # Local filesystem storage
     local_backup_dir: Path = Field(default=Path("./backups"), description="Directory for local filesystem backups")
 
-    # S3 backend
+    # S3 storage
     s3_bucket: str | None = Field(default=None, description="S3 bucket name")
     s3_prefix: str = Field(default="vaultwarden", description="Key prefix inside the S3 bucket")
     s3_region: BucketLocationConstraintType = Field(default="eu-central-1", description="AWS region")

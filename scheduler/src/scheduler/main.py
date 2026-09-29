@@ -6,9 +6,9 @@ import schedule
 from scheduler.backends.monitoring.base import JobMonitor
 from scheduler.backends.monitoring.healthchecks import HealthchecksMonitor
 from scheduler.backends.monitoring.noop import NoopMonitor
-from scheduler.backends.storage.base import StorageBackend
-from scheduler.backends.storage.local import LocalFilesystemBackend
-from scheduler.backends.storage.s3 import S3Backend
+from scheduler.backends.storage.base import Storage
+from scheduler.backends.storage.local import LocalFilesystemStorage
+from scheduler.backends.storage.s3 import S3Storage
 from scheduler.backup.archiver import run_backup
 from scheduler.backup.config import BackupConfig
 
@@ -24,13 +24,13 @@ def setup_logging() -> None:
     )
 
 
-def create_storage_backend(config: BackupConfig) -> StorageBackend:
-    """Create a storage backend from configuration."""
+def create_storage(config: BackupConfig) -> Storage:
+    """Create a storage from configuration."""
     if config.s3_bucket:
         if not config.aws_access_key_id or not config.aws_secret_access_key:
-            raise ValueError("AWS credentials must be provided when using S3 backend")
-        logger.info("Backend: AWS S3 (s3://%s/%s)", config.s3_bucket, config.s3_prefix)
-        return S3Backend(
+            raise ValueError("AWS credentials must be provided when using S3 storage")
+        logger.info("Storage: AWS S3 (s3://%s/%s)", config.s3_bucket, config.s3_prefix)
+        return S3Storage(
             bucket=config.s3_bucket,
             prefix=config.s3_prefix,
             region=config.s3_region,
@@ -38,8 +38,8 @@ def create_storage_backend(config: BackupConfig) -> StorageBackend:
             secret_access_key=config.aws_secret_access_key.get_secret_value(),
         )
 
-    logger.info("Backend: Local filesystem (%s)", config.local_backup_dir)
-    return LocalFilesystemBackend(remote_dir=config.local_backup_dir)
+    logger.info("Storage: Local filesystem (%s)", config.local_backup_dir)
+    return LocalFilesystemStorage(remote_dir=config.local_backup_dir)
 
 
 def create_job_monitor(config: BackupConfig) -> JobMonitor:
@@ -53,13 +53,13 @@ def schedule_backup_jobs() -> None:
     """Set up the backup jobs according to the configuration."""
     logger.info("Scheduling backup jobs...")
     config = BackupConfig()
-    backend = create_storage_backend(config)
+    storage = create_storage(config)
     monitor = create_job_monitor(config)
 
     def _job(include_extended: bool) -> None:
         monitor.start()
         try:
-            run_backup(config, backend, include_extended)
+            run_backup(config, storage, include_extended)
         except Exception:
             monitor.fail()
             logger.exception("Backup job failed")
