@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scheduler.backends.local import LocalFilesystemBackend
+from scheduler.backends.storage.local import LocalFilesystemBackend
 
 # -- __init__ --
 

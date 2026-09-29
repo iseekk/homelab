@@ -4,7 +4,7 @@ from pathlib import Path
 import boto3
 from mypy_boto3_s3 import S3Client
 
-from scheduler.backends.base import StorageBackend
+from scheduler.backends.storage.base import StorageBackend
 
 logger = logging.getLogger(__name__)
 

@@ -95,3 +95,13 @@ The scheduler supports two storage backends, selected automatically based on the
 
 - **Local filesystem** *(default)* — archives are stored in subdirectories `./backups/daily/`, `./backups/weekly/`, and `./backups/monthly/` (the `./backups/` directory is mounted inside the container). Used when `S3_BUCKET` is **not** set.
 - **AWS S3** — archives are uploaded directly to an S3 bucket. Activated when `S3_BUCKET` is set.
+
+### Monitoring (optional)
+
+When `HEALTHCHECKS_PING_URL` is set (e.g. `https://hc-ping.com/<uuid>` from [healthchecks.io](https://healthchecks.io)), the scheduler signals each backup run:
+
+- **start** — when the job begins
+- **success** — when the backup completes without error
+- **fail** — when the backup raises an exception
+
+Configure the check's schedule and grace time in healthchecks.io to match your backup interval and maximum expected run duration. Ping failures are logged but do not interrupt the backup.

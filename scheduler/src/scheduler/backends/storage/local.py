@@ -2,7 +2,7 @@ import logging
 import shutil
 from pathlib import Path
 
-from scheduler.backends.base import StorageBackend
+from scheduler.backends.storage.base import StorageBackend
 
 logger = logging.getLogger(__name__)
 

@@ -10,12 +10,8 @@ from freezegun import freeze_time
 from pydantic import SecretStr
 from pytest_mock import MockerFixture
 
-from scheduler.backup.backup import (
-    BackupConfig,
-    VaultwardenArchiver,
-    get_retention_sub_dirs,
-    run_backup,
-)
+from scheduler.backup.archiver import VaultwardenArchiver, get_retention_sub_dirs, run_backup
+from scheduler.backup.config import BackupConfig
 
 FROZEN_NOW = "2026-06-12 12:00:00"  # Friday, 12th day of month
 FROZEN_DT = datetime(2026, 6, 12, 12, 0, 0)
