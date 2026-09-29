@@ -3,10 +3,14 @@ import time
 
 import schedule
 
-from scheduler.backends.base import StorageBackend
-from scheduler.backends.local import LocalFilesystemBackend
-from scheduler.backends.s3 import S3Backend
-from scheduler.backup.backup import BackupConfig, run_backup
+from scheduler.backends.monitoring.base import JobMonitor
+from scheduler.backends.monitoring.healthchecks import HealthchecksMonitor
+from scheduler.backends.monitoring.noop import NoopMonitor
+from scheduler.backends.storage.base import Storage
+from scheduler.backends.storage.local import LocalFilesystemStorage
+from scheduler.backends.storage.s3 import S3Storage
+from scheduler.backup.archiver import run_backup
+from scheduler.backup.config import BackupConfig
 
 logger = logging.getLogger(__name__)
 
@@ -20,31 +24,47 @@ def setup_logging() -> None:
     )
 
 
-def schedule_backup_jobs() -> None:
-    """Set up the backup jobs according to the configuration."""
-    logger.info("Scheduling backup jobs...")
-    config = BackupConfig()
-    backend: StorageBackend
+def create_storage(config: BackupConfig) -> Storage:
+    """Create a storage from configuration."""
     if config.s3_bucket:
         if not config.aws_access_key_id or not config.aws_secret_access_key:
-            raise ValueError("AWS credentials must be provided when using S3 backend")
-        backend = S3Backend(
+            raise ValueError("AWS credentials must be provided when using S3 storage")
+        logger.info("Storage: AWS S3 (s3://%s/%s)", config.s3_bucket, config.s3_prefix)
+        return S3Storage(
             bucket=config.s3_bucket,
             prefix=config.s3_prefix,
             region=config.s3_region,
             access_key_id=config.aws_access_key_id,
             secret_access_key=config.aws_secret_access_key.get_secret_value(),
         )
-        logger.info("Backend: AWS S3 (s3://%s/%s)", config.s3_bucket, config.s3_prefix)
-    else:
-        backend = LocalFilesystemBackend(remote_dir=config.local_backup_dir)
-        logger.info("Backend: Local filesystem (%s)", config.local_backup_dir)
+
+    logger.info("Storage: Local filesystem (%s)", config.local_backup_dir)
+    return LocalFilesystemStorage(remote_dir=config.local_backup_dir)
+
+
+def create_job_monitor(config: BackupConfig) -> JobMonitor:
+    """Create a job monitor from configuration."""
+    if config.healthchecks_ping_url:
+        return HealthchecksMonitor(str(config.healthchecks_ping_url))
+    return NoopMonitor()
+
+
+def schedule_backup_jobs() -> None:
+    """Set up the backup jobs according to the configuration."""
+    logger.info("Scheduling backup jobs...")
+    config = BackupConfig()
+    storage = create_storage(config)
+    monitor = create_job_monitor(config)
 
     def _job(include_extended: bool) -> None:
+        monitor.start()
         try:
-            run_backup(config, backend, include_extended)
+            run_backup(config, storage, include_extended)
         except Exception:
+            monitor.fail()
             logger.exception("Backup job failed")
+        else:
+            monitor.success()
 
     for i, run_time in enumerate(sorted(config.resolved_backup_times)):
         is_first_run = i == 0

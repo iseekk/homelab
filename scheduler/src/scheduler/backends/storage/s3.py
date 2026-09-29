@@ -4,12 +4,12 @@ from pathlib import Path
 import boto3
 from mypy_boto3_s3 import S3Client
 
-from scheduler.backends.base import StorageBackend
+from scheduler.backends.storage.base import Storage
 
 logger = logging.getLogger(__name__)
 
 
-class S3Backend(StorageBackend):
+class S3Storage(Storage):
     """Amazon S3 storage backend."""
 
     def __init__(

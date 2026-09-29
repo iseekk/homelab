@@ -2,13 +2,13 @@ import logging
 import shutil
 from pathlib import Path
 
-from scheduler.backends.base import StorageBackend
+from scheduler.backends.storage.base import Storage
 
 logger = logging.getLogger(__name__)
 
 
-class LocalFilesystemBackend(StorageBackend):
-    """Simple local filesystem backend."""
+class LocalFilesystemStorage(Storage):
+    """Simple local filesystem storage backend."""
 
     def __init__(self, remote_dir: Path) -> None:
         self.remote_dir = remote_dir
