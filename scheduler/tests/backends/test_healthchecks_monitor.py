@@ -62,3 +62,13 @@ def test_ping_does_not_raise_on_failure(mocker: MockerFixture) -> None:
 
     monitor = HealthchecksMonitor("https://hc-ping.com/uuid")
     monitor.fail()
+
+
+def test_ping_does_not_raise_on_malformed_url(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "scheduler.backends.monitoring.healthchecks.urlopen",
+        side_effect=ValueError("invalid URL"),
+    )
+
+    monitor = HealthchecksMonitor("https://hc-ping.com/uuid")
+    monitor.start()

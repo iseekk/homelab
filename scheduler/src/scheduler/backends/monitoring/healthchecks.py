@@ -22,7 +22,6 @@ class HealthchecksMonitor(JobMonitor):
         self._ping_url = ping_url.rstrip("/")
         self._timeout = timeout
         self._max_retries = max_retries
-        logger.info("Healthchecks monitor initialized with URL: %s", self._ping_url)
 
     def start(self) -> None:
         self._ping(f"{self._ping_url}/start")
@@ -38,7 +37,7 @@ class HealthchecksMonitor(JobMonitor):
             try:
                 with urlopen(Request(url, method="GET"), timeout=self._timeout):
                     return
-            except URLError as exc:
+            except (URLError, ValueError) as exc:
                 if attempt == self._max_retries:
                     logger.warning("Healthchecks ping failed after %d attempts: %s", attempt, exc)
                 else:

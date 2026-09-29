@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from mypy_boto3_s3.literals import BucketLocationConstraintType
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,9 +49,16 @@ class BackupConfig(BaseSettings):
     aws_secret_access_key: SecretStr | None = Field(default=None, description="AWS secret access key")
 
     # Monitoring
-    healthchecks_ping_url: str | None = Field(
+    healthchecks_ping_url: HttpUrl | None = Field(
         default=None, description="Healthchecks.io ping URL (e.g. https://hc-ping.com/<uuid>)"
     )
+
+    @field_validator("healthchecks_ping_url", mode="before")
+    @classmethod
+    def empty_healthchecks_url_is_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @property
     def resolved_data_db(self) -> Path:

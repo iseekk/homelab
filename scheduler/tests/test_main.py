@@ -6,6 +6,7 @@ import schedule
 from pydantic import SecretStr
 from pytest_mock import MockerFixture
 
+from scheduler.backends.monitoring.healthchecks import HealthchecksMonitor
 from scheduler.backup.config import BackupConfig
 from scheduler.main import create_job_monitor, create_storage, main, schedule_backup_jobs
 
@@ -75,7 +76,7 @@ def test_create_storage_uses_local(mocker: MockerFixture) -> None:
 
 
 def test_create_job_monitor_uses_healthchecks(mocker: MockerFixture) -> None:
-    config = make_config(healthchecks_ping_url="https://hc-ping.com/uuid")
+    config = BackupConfig.model_validate({"healthchecks_ping_url": "https://hc-ping.com/uuid"})
     mock_healthchecks = mocker.patch("scheduler.main.HealthchecksMonitor")
 
     create_job_monitor(config)
@@ -130,6 +131,27 @@ def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: Magi
     extended_flags = [call.kwargs["include_extended"] for call in do_calls]
     assert extended_flags.count(True) == 1
     assert extended_flags.count(False) == 2
+
+
+def test_job_runs_backup_when_healthchecks_ping_raises_value_error(
+    mocker: MockerFixture, mock_config: MagicMock
+) -> None:
+    mocker.patch("scheduler.main.create_storage")
+    mock_run_backup = mocker.patch("scheduler.main.run_backup")
+    mocker.patch(
+        "scheduler.backends.monitoring.healthchecks.urlopen",
+        side_effect=ValueError("invalid URL"),
+    )
+    mocker.patch(
+        "scheduler.main.create_job_monitor",
+        return_value=HealthchecksMonitor("https://hc-ping.com/uuid"),
+    )
+    schedule.clear()
+
+    schedule_backup_jobs()
+    schedule.run_all()
+
+    mock_run_backup.assert_called_once()
 
 
 def test_job_signals_success(mocker: MockerFixture, mock_config: MagicMock) -> None:

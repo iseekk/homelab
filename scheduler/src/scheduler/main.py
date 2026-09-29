@@ -45,7 +45,7 @@ def create_storage(config: BackupConfig) -> Storage:
 def create_job_monitor(config: BackupConfig) -> JobMonitor:
     """Create a job monitor from configuration."""
     if config.healthchecks_ping_url:
-        return HealthchecksMonitor(config.healthchecks_ping_url)
+        return HealthchecksMonitor(str(config.healthchecks_ping_url))
     return NoopMonitor()
 
 
