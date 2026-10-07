@@ -5,7 +5,7 @@ from pydantic import Field, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class BackupConfig(BaseSettings):
+class Config(BaseSettings):
     """Configuration loaded from environment variables."""
 
     model_config = SettingsConfigDict(

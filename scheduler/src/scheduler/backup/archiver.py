@@ -10,7 +10,7 @@ from pathlib import Path
 import py7zr
 
 from scheduler.backends.storage.base import Storage
-from scheduler.backup.config import BackupConfig
+from scheduler.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class VaultwardenArchiver:
     """Responsible for collecting Vaultwarden files and packaging them into a password-protected archive."""
 
-    def __init__(self, config: BackupConfig, now: datetime) -> None:
+    def __init__(self, config: Config, now: datetime) -> None:
         self.config = config
         self.now_str: str = now.strftime(config.backup_file_date_format)
 
@@ -119,7 +119,7 @@ def get_retention_sub_dirs(now: datetime, include_extended: bool) -> list[str]:
     return dirs
 
 
-def run_backup(config: BackupConfig, storage: Storage, include_extended: bool) -> None:
+def run_backup(config: Config, storage: Storage, include_extended: bool) -> None:
     """Run the backup process: create temporary area, collect files, package into archive, and upload to storage."""
     now = datetime.now()
     logger.info("=" * 38)
