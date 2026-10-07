@@ -2,7 +2,7 @@ import logging
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-from scheduler.backends.monitoring.base import JobMonitor
+from scheduler.backends.monitoring.base import Monitor
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +10,8 @@ DEFAULT_TIMEOUT = 10.0
 MAX_RETRIES = 3
 
 
-class HealthchecksMonitor(JobMonitor):
-    """Healthchecks.io adapter for job lifecycle pings."""
+class HealthchecksMonitor(Monitor):
+    """Healthchecks.io adapter for pings (heartbeats, job lifecycle)."""
 
     def __init__(
         self,

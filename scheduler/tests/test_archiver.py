@@ -11,19 +11,19 @@ from pydantic import SecretStr
 from pytest_mock import MockerFixture
 
 from scheduler.backup.archiver import VaultwardenArchiver, get_retention_sub_dirs, run_backup
-from scheduler.backup.config import BackupConfig
+from scheduler.config import Config
 
 FROZEN_NOW = "2026-06-12 12:00:00"  # Friday, 12th day of month
 FROZEN_DT = datetime(2026, 6, 12, 12, 0, 0)
 
 
-def make_config(tmp_path: Path, **overrides: object) -> BackupConfig:
+def make_config(tmp_path: Path, **overrides: object) -> Config:
     fields: dict[str, object] = {
         "data_dir": tmp_path / "data",
         "local_backup_dir": tmp_path / "backups",
     }
     fields.update(overrides)
-    return BackupConfig.model_construct(**fields)  # type: ignore[arg-type]
+    return Config.model_construct(**fields)  # type: ignore[arg-type]
 
 
 def make_archiver(tmp_path: Path, **config_overrides: object) -> VaultwardenArchiver:

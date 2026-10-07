@@ -7,21 +7,21 @@ from pydantic import SecretStr
 from pytest_mock import MockerFixture
 
 from scheduler.backends.monitoring.healthchecks import HealthchecksMonitor
-from scheduler.backup.config import BackupConfig
-from scheduler.main import create_job_monitor, create_storage, main, schedule_backup_jobs
+from scheduler.config import Config
+from scheduler.main import create_monitor, create_storage, main, schedule_backup_jobs
 
 
-def make_config(**overrides: object) -> BackupConfig:
+def make_config(**overrides: object) -> Config:
     fields: dict[str, object] = {
         "local_backup_dir": Path("/tmp/backups"),
     }
     fields.update(overrides)
-    return BackupConfig.model_construct(**fields)  # type: ignore[arg-type]
+    return Config.model_construct(**fields)  # type: ignore[arg-type]
 
 
 @pytest.fixture
 def mock_config(mocker: MockerFixture) -> MagicMock:
-    mock_cls = mocker.patch("scheduler.main.BackupConfig")
+    mock_cls = mocker.patch("scheduler.main.Config")
     config: MagicMock = mock_cls.return_value
     config.s3_bucket = None
     config.local_backup_dir = "/tmp/backups"
@@ -72,23 +72,23 @@ def test_create_storage_uses_local(mocker: MockerFixture) -> None:
     mock_local.assert_called_once_with(remote_dir=Path("/tmp/backups"))
 
 
-# -- create_job_monitor --
+# -- create_monitor --
 
 
-def test_create_job_monitor_uses_healthchecks(mocker: MockerFixture) -> None:
-    config = BackupConfig.model_validate({"healthchecks_ping_url": "https://hc-ping.com/uuid"})
+def test_create_monitor_uses_healthchecks(mocker: MockerFixture) -> None:
+    config = Config.model_validate({"healthchecks_ping_url": "https://hc-ping.com/uuid"})
     mock_healthchecks = mocker.patch("scheduler.main.HealthchecksMonitor")
 
-    create_job_monitor(config)
+    create_monitor(config)
 
     mock_healthchecks.assert_called_once_with("https://hc-ping.com/uuid")
 
 
-def test_create_job_monitor_uses_noop(mocker: MockerFixture) -> None:
+def test_create_monitor_uses_noop(mocker: MockerFixture) -> None:
     config = make_config(healthchecks_ping_url=None)
     mock_noop = mocker.patch("scheduler.main.NoopMonitor")
 
-    create_job_monitor(config)
+    create_monitor(config)
 
     mock_noop.assert_called_once()
 
@@ -98,7 +98,7 @@ def test_create_job_monitor_uses_noop(mocker: MockerFixture) -> None:
 
 def test_schedule_backup_jobs_creates_storage_and_monitor(mock_config: MagicMock, mocker: MockerFixture) -> None:
     mock_create_storage = mocker.patch("scheduler.main.create_storage")
-    mock_create_monitor = mocker.patch("scheduler.main.create_job_monitor")
+    mock_create_monitor = mocker.patch("scheduler.main.create_monitor")
     mocker.patch("scheduler.main.schedule")
 
     schedule_backup_jobs()
@@ -110,7 +110,7 @@ def test_schedule_backup_jobs_creates_storage_and_monitor(mock_config: MagicMock
 def test_schedule_backup_jobs_schedules_one_job_per_time(mock_config: MagicMock, mocker: MockerFixture) -> None:
     mock_config.resolved_backup_times = ["02:00", "06:00", "14:00"]
     mocker.patch("scheduler.main.create_storage")
-    mocker.patch("scheduler.main.create_job_monitor")
+    mocker.patch("scheduler.main.create_monitor")
     mock_schedule = mocker.patch("scheduler.main.schedule")
 
     schedule_backup_jobs()
@@ -122,7 +122,7 @@ def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: Magi
     # sorted: 02:00 first → include_extended=True; 06:00, 14:00 → False
     mock_config.resolved_backup_times = ["06:00", "02:00", "14:00"]
     mocker.patch("scheduler.main.create_storage")
-    mocker.patch("scheduler.main.create_job_monitor")
+    mocker.patch("scheduler.main.create_monitor")
     mock_schedule = mocker.patch("scheduler.main.schedule")
 
     schedule_backup_jobs()
@@ -143,7 +143,7 @@ def test_job_runs_backup_when_healthchecks_ping_raises_value_error(
         side_effect=ValueError("invalid URL"),
     )
     mocker.patch(
-        "scheduler.main.create_job_monitor",
+        "scheduler.main.create_monitor",
         return_value=HealthchecksMonitor("https://hc-ping.com/uuid"),
     )
     schedule.clear()
@@ -158,7 +158,7 @@ def test_job_signals_success(mocker: MockerFixture, mock_config: MagicMock) -> N
     mocker.patch("scheduler.main.create_storage")
     mocker.patch("scheduler.main.run_backup")
     mock_monitor = mocker.MagicMock()
-    mocker.patch("scheduler.main.create_job_monitor", return_value=mock_monitor)
+    mocker.patch("scheduler.main.create_monitor", return_value=mock_monitor)
     schedule.clear()
 
     schedule_backup_jobs()
@@ -173,7 +173,7 @@ def test_job_signals_failure(mocker: MockerFixture, mock_config: MagicMock) -> N
     mocker.patch("scheduler.main.create_storage")
     mocker.patch("scheduler.main.run_backup", side_effect=RuntimeError("boom"))
     mock_monitor = mocker.MagicMock()
-    mocker.patch("scheduler.main.create_job_monitor", return_value=mock_monitor)
+    mocker.patch("scheduler.main.create_monitor", return_value=mock_monitor)
     schedule.clear()
 
     schedule_backup_jobs()

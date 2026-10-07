@@ -3,14 +3,14 @@ import time
 
 import schedule
 
-from scheduler.backends.monitoring.base import JobMonitor
+from scheduler.backends.monitoring.base import Monitor
 from scheduler.backends.monitoring.healthchecks import HealthchecksMonitor
 from scheduler.backends.monitoring.noop import NoopMonitor
 from scheduler.backends.storage.base import Storage
 from scheduler.backends.storage.local import LocalFilesystemStorage
 from scheduler.backends.storage.s3 import S3Storage
 from scheduler.backup.archiver import run_backup
-from scheduler.backup.config import BackupConfig
+from scheduler.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def setup_logging() -> None:
     )
 
 
-def create_storage(config: BackupConfig) -> Storage:
+def create_storage(config: Config) -> Storage:
     """Create a storage from configuration."""
     if config.s3_bucket:
         if not config.aws_access_key_id or not config.aws_secret_access_key:
@@ -42,8 +42,8 @@ def create_storage(config: BackupConfig) -> Storage:
     return LocalFilesystemStorage(remote_dir=config.local_backup_dir)
 
 
-def create_job_monitor(config: BackupConfig) -> JobMonitor:
-    """Create a job monitor from configuration."""
+def create_monitor(config: Config) -> Monitor:
+    """Create a monitor from configuration."""
     if config.healthchecks_ping_url:
         return HealthchecksMonitor(str(config.healthchecks_ping_url))
     return NoopMonitor()
@@ -52,9 +52,9 @@ def create_job_monitor(config: BackupConfig) -> JobMonitor:
 def schedule_backup_jobs() -> None:
     """Set up the backup jobs according to the configuration."""
     logger.info("Scheduling backup jobs...")
-    config = BackupConfig()
+    config = Config()
     storage = create_storage(config)
-    monitor = create_job_monitor(config)
+    monitor = create_monitor(config)
 
     def _job(include_extended: bool) -> None:
         monitor.start()

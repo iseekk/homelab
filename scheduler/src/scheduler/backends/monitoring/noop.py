@@ -1,7 +1,7 @@
-from scheduler.backends.monitoring.base import JobMonitor
+from scheduler.backends.monitoring.base import Monitor
 
 
-class NoopMonitor(JobMonitor):
+class NoopMonitor(Monitor):
     """No-op monitor used when no external monitoring is configured."""
 
     def start(self) -> None:
