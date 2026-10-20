@@ -2,6 +2,17 @@ name: CI
 
 on:
   pull_request:
+    paths:
+      - 'scheduler/**'
+      - '.github/workflows/ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scheduler/**'
+      - '.github/workflows/ci.yml'
+
+permissions:
+  contents: read
 
 jobs:
   scheduler:
@@ -16,16 +27,18 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
+          cache-dependency-glob: "scheduler/uv.lock"
 
-      - run: uv sync --frozen
+      - name: Install dependencies
+        run: uv sync --frozen
 
       - name: Lint
         run: |
-          uv run --frozen ruff format --check
-          uv run --frozen ruff check
+          uv run --no-sync ruff format --check
+          uv run --no-sync ruff check
 
       - name: Typecheck
-        run: uv run --frozen mypy .
+        run: uv run --no-sync mypy .
 
       - name: Test
-        run: uv run --frozen pytest -s -vv --cov=src --cov-report=term-missing tests
+        run: uv run --no-sync pytest -vv --tb=short --cov=src --cov-report=term-missing tests
