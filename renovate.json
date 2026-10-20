@@ -1,18 +1,27 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
   "timezone": "Europe/Warsaw",
   "schedule": ["every weekend"],
   "minimumReleaseAge": "3 days",
+  "labels": ["dependencies"],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null
+  },
   "lockFileMaintenance": {
-    "enabled": true,
-    "groupName": "uv-lockfile-maintenance"
+    "enabled": true
   },
   "packageRules": [
     {
       "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "Docker (minor & patch)"
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "Docker (minor, patch & digest)"
     },
     {
       "matchManagers": ["pep621"],
@@ -20,8 +29,9 @@
       "groupName": "Python Dependencies (minor & patch)"
     },
     {
-      "matchUpdateTypes": ["major"],
-      "groupName": null
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "GitHub Actions (minor, patch & digest)"
     }
   ]
 }
