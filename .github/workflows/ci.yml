@@ -6,7 +6,7 @@ on:
       - 'scheduler/**'
       - '.github/workflows/ci.yml'
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'scheduler/**'
       - '.github/workflows/ci.yml'
