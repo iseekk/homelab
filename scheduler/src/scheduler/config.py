@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from mypy_boto3_s3.literals import BucketLocationConstraintType
+from mypy_boto3_s3.literals import RegionName
 from pydantic import Field, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -13,6 +13,7 @@ class Config(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     # Vaultwarden data paths
@@ -30,7 +31,7 @@ class Config(BaseSettings):
     backup_file_date_format: str = Field(default="%Y-%m-%d-%H%M", description="Date format used in backup file names")
 
     # Compression
-    archive_password: SecretStr | None = Field(default=None, description="Password for the archive")
+    archive_password: SecretStr = Field(min_length=14, description="Password for the archive (min. 14 characters)")
 
     # Schedule
     backup_times: str = Field(
@@ -40,11 +41,14 @@ class Config(BaseSettings):
 
     # Local filesystem storage
     local_backup_dir: Path = Field(default=Path("./backups"), description="Directory for local filesystem backups")
+    retention_daily_days: int = Field(default=7, ge=1, description="Local storage: days to keep daily backups")
+    retention_weekly_days: int = Field(default=35, ge=1, description="Local storage: days to keep weekly backups")
+    retention_monthly_days: int = Field(default=365, ge=1, description="Local storage: days to keep monthly backups")
 
     # S3 storage
     s3_bucket: str | None = Field(default=None, description="S3 bucket name")
     s3_prefix: str = Field(default="vaultwarden", description="Key prefix inside the S3 bucket")
-    s3_region: BucketLocationConstraintType = Field(default="eu-central-1", description="AWS region")
+    s3_region: RegionName = Field(default="eu-central-1", description="AWS region")
     aws_access_key_id: str | None = Field(default=None, description="AWS access key ID")
     aws_secret_access_key: SecretStr | None = Field(default=None, description="AWS secret access key")
 

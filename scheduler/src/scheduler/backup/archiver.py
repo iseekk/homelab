@@ -26,8 +26,7 @@ class VaultwardenArchiver:
         """SQLite backup using the native sqlite3.Connection.backup() method."""
         db_path = self.config.resolved_data_db
         if not db_path.exists():
-            logger.info("SQLite database file does not exist: %s — skipping", db_path)
-            return
+            raise FileNotFoundError(f"SQLite database file does not exist: {db_path}")
 
         dest = temp_dir / f"db.{self.now_str}.sqlite3"
 
@@ -88,14 +87,11 @@ class VaultwardenArchiver:
             return None
 
         archive_path = temp_dir / f"backup.{self.now_str}.7z"
-        password = self.config.archive_password.get_secret_value() if self.config.archive_password else None
-        if not password:
-            logger.warning("No archive password provided — creating unencrypted archive (not recommended)")
         with py7zr.SevenZipFile(
             file=archive_path,
             mode="w",
-            password=password,
-            header_encryption=password is not None,
+            password=self.config.archive_password.get_secret_value(),
+            header_encryption=True,
         ) as archive:
             for file in files_to_archive:
                 if file.is_file():
@@ -106,11 +102,11 @@ class VaultwardenArchiver:
         return archive_path
 
 
-def get_retention_sub_dirs(now: datetime, include_extended: bool) -> list[str]:
-    """Return retention subdirectories based on the current date and whether extended retention should be included."""
+def get_retention_sub_dirs(now: datetime, is_first_run_of_day: bool) -> list[str]:
+    """Return retention subdirectories; weekly and monthly are added only on the first run of the day."""
     dirs = ["daily"]
 
-    if include_extended:
+    if is_first_run_of_day:
         if now.weekday() == 0:
             dirs.append("weekly")
         if now.day == 1:
@@ -119,7 +115,7 @@ def get_retention_sub_dirs(now: datetime, include_extended: bool) -> list[str]:
     return dirs
 
 
-def run_backup(config: Config, storage: Storage, include_extended: bool) -> None:
+def run_backup(config: Config, storage: Storage, is_first_run_of_day: bool) -> None:
     """Run the backup process: create temporary area, collect files, package into archive, and upload to storage."""
     now = datetime.now()
     logger.info("=" * 38)
@@ -144,7 +140,7 @@ def run_backup(config: Config, storage: Storage, include_extended: bool) -> None
         archive_path = archiver.package(temp_dir)
 
         if archive_path:
-            sub_dirs = get_retention_sub_dirs(now, include_extended)
+            sub_dirs = get_retention_sub_dirs(now, is_first_run_of_day)
             for sub_dir in sub_dirs:
                 remote_name = f"{sub_dir}/{archive_path.name}"
                 logger.info("Uploading file: %s", remote_name)
