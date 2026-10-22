@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from mypy_boto3_s3.literals import BucketLocationConstraintType
+from mypy_boto3_s3.literals import RegionName
 from pydantic import Field, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -44,7 +44,7 @@ class Config(BaseSettings):
     # S3 storage
     s3_bucket: str | None = Field(default=None, description="S3 bucket name")
     s3_prefix: str = Field(default="vaultwarden", description="Key prefix inside the S3 bucket")
-    s3_region: BucketLocationConstraintType = Field(default="eu-central-1", description="AWS region")
+    s3_region: RegionName = Field(default="eu-central-1", description="AWS region")
     aws_access_key_id: str | None = Field(default=None, description="AWS access key ID")
     aws_secret_access_key: SecretStr | None = Field(default=None, description="AWS secret access key")
 
