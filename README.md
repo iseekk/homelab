@@ -24,7 +24,10 @@ This is how the directory structure should look in your main folder (e.g., on an
 
 1. **Prepare the environment:** Ensure you have Docker and the Docker Compose plugin installed on your Raspberry Pi.
 
-2. **Clone the files:** Place the `docker-compose.yml` file into the `~/homelab/` directory.
+2. **Clone the repository:** The whole repository is needed, because `docker-compose.yml` builds the `scheduler` image from the `scheduler/` directory.
+   ```bash
+   git clone https://github.com/iseekk/homelab.git ~/homelab && cd ~/homelab
+   ```
 
 3. **Environment setup:** Copy the environment variables template:
    ```bash
