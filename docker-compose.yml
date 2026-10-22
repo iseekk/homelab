@@ -12,8 +12,6 @@ services:
     image: tailscale/tailscale:v1.104.1
     container_name: tailscale
     hostname: homelab
-    volumes:
-      - ./ts-data:/var/lib/tailscale
     environment:
       - TZ
       - TS_AUTHKEY
@@ -23,6 +21,8 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    volumes:
+      - ./ts-data:/var/lib/tailscale
 
   vaultwarden:
     <<: *base
