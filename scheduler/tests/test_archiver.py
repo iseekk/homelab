@@ -56,12 +56,12 @@ def test_get_retention_sub_dirs(now: datetime, include_extended: bool, expected:
 # -- VaultwardenArchiver.backup_sqlite --
 
 
-def test_backup_sqlite_skips_when_missing(tmp_path: Path) -> None:
+def test_backup_sqlite_raises_when_missing(tmp_path: Path) -> None:
     archiver = make_archiver(tmp_path)
     temp_dir = tmp_path / "temp"
     temp_dir.mkdir()
-    archiver.backup_sqlite(temp_dir)
-    assert list(temp_dir.iterdir()) == []
+    with pytest.raises(FileNotFoundError, match="SQLite database file does not exist"):
+        archiver.backup_sqlite(temp_dir)
 
 
 def test_backup_sqlite_creates_valid_db(tmp_path: Path) -> None:
@@ -230,14 +230,14 @@ def test_run_backup_uploads_for_each_sub_dir(mocker: MockerFixture, tmp_path: Pa
 
 
 @freeze_time(FROZEN_NOW)
-def test_run_backup_no_upload_when_nothing_collected(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_run_backup_raises_and_uploads_nothing_when_db_missing(mocker: MockerFixture, tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     data_dir.mkdir()
-    # no files → package returns None
 
     config = make_config(tmp_path)
     storage = mocker.MagicMock()
 
-    run_backup(config, storage, include_extended=False)
+    with pytest.raises(FileNotFoundError, match="SQLite database file does not exist"):
+        run_backup(config, storage, include_extended=False)
 
     storage.upload.assert_not_called()

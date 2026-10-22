@@ -26,8 +26,7 @@ class VaultwardenArchiver:
         """SQLite backup using the native sqlite3.Connection.backup() method."""
         db_path = self.config.resolved_data_db
         if not db_path.exists():
-            logger.info("SQLite database file does not exist: %s — skipping", db_path)
-            return
+            raise FileNotFoundError(f"SQLite database file does not exist: {db_path}")
 
         dest = temp_dir / f"db.{self.now_str}.sqlite3"
 
