@@ -39,7 +39,14 @@ def create_storage(config: Config) -> Storage:
         )
 
     logger.info("Storage: Local filesystem (%s)", config.local_backup_dir)
-    return LocalFilesystemStorage(remote_dir=config.local_backup_dir)
+    return LocalFilesystemStorage(
+        remote_dir=config.local_backup_dir,
+        retention_days={
+            "daily": config.retention_daily_days,
+            "weekly": config.retention_weekly_days,
+            "monthly": config.retention_monthly_days,
+        },
+    )
 
 
 def create_monitor(config: Config) -> Monitor:
@@ -52,14 +59,14 @@ def create_monitor(config: Config) -> Monitor:
 def schedule_backup_jobs() -> None:
     """Set up the backup jobs according to the configuration."""
     logger.info("Scheduling backup jobs...")
-    config = Config()
+    config = Config()  # type: ignore[call-arg]  # required fields are read from the environment
     storage = create_storage(config)
     monitor = create_monitor(config)
 
-    def _job(include_extended: bool) -> None:
+    def _job(is_first_run_of_day: bool) -> None:
         monitor.start()
         try:
-            run_backup(config, storage, include_extended)
+            run_backup(config, storage, is_first_run_of_day)
         except Exception:
             monitor.fail()
             logger.exception("Backup job failed")
@@ -67,9 +74,9 @@ def schedule_backup_jobs() -> None:
             monitor.success()
 
     for i, run_time in enumerate(sorted(config.resolved_backup_times)):
-        is_first_run = i == 0
-        schedule.every().day.at(run_time).do(_job, include_extended=is_first_run)
-        logger.info("Scheduled backup at: %s (extended retention: %s)", run_time, is_first_run)
+        is_first_run_of_day = i == 0
+        schedule.every().day.at(run_time).do(_job, is_first_run_of_day=is_first_run_of_day)
+        logger.info("Scheduled backup at: %s (first run of the day: %s)", run_time, is_first_run_of_day)
 
 
 def main() -> None:

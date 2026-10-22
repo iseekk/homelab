@@ -1,5 +1,4 @@
 x-base: &base
-  env_file: .env
   restart: unless-stopped
   logging:
     driver: "json-file"
@@ -15,6 +14,10 @@ services:
     hostname: homelab
     volumes:
       - ./ts-data:/var/lib/tailscale
+    environment:
+      - TZ
+      - TS_AUTHKEY
+      - TS_STATE_DIR
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -26,6 +29,11 @@ services:
     image: vaultwarden/server:1.37.4
     container_name: vaultwarden
     network_mode: "service:tailscale"
+    environment:
+      - TZ
+      - DOMAIN
+      - INVITATIONS_ALLOWED
+      - SIGNUPS_ALLOWED
     volumes:
       - ./vw-data:/data
     depends_on:
@@ -37,6 +45,19 @@ services:
       context: ./scheduler
       dockerfile: Dockerfile
     container_name: scheduler
+    environment:
+      - TZ
+      - ARCHIVE_PASSWORD
+      - BACKUP_TIMES
+      - RETENTION_DAILY_DAYS
+      - RETENTION_WEEKLY_DAYS
+      - RETENTION_MONTHLY_DAYS
+      - S3_BUCKET
+      - S3_PREFIX
+      - S3_REGION
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - HEALTHCHECKS_PING_URL
     volumes:
       - ./vw-data:/data:ro
       - ./backups:/app/backups

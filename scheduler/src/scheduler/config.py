@@ -30,7 +30,7 @@ class Config(BaseSettings):
     backup_file_date_format: str = Field(default="%Y-%m-%d-%H%M", description="Date format used in backup file names")
 
     # Compression
-    archive_password: SecretStr | None = Field(default=None, description="Password for the archive")
+    archive_password: SecretStr = Field(min_length=14, description="Password for the archive (min. 14 characters)")
 
     # Schedule
     backup_times: str = Field(
@@ -40,6 +40,9 @@ class Config(BaseSettings):
 
     # Local filesystem storage
     local_backup_dir: Path = Field(default=Path("./backups"), description="Directory for local filesystem backups")
+    retention_daily_days: int = Field(default=7, ge=1, description="Local storage: days to keep daily backups")
+    retention_weekly_days: int = Field(default=35, ge=1, description="Local storage: days to keep weekly backups")
+    retention_monthly_days: int = Field(default=365, ge=1, description="Local storage: days to keep monthly backups")
 
     # S3 storage
     s3_bucket: str | None = Field(default=None, description="S3 bucket name")

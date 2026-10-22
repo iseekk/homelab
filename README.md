@@ -30,31 +30,38 @@ This is how the directory structure should look in your main folder (e.g., on an
    ```bash
    cp .env-example .env
    ```
+   Set `ARCHIVE_PASSWORD` (required, at least 14 characters) - it encrypts every backup archive. Store it somewhere safe outside this server: without it the backups cannot be restored.
+   Each container only receives the variables listed under its `environment:` in `docker-compose.yml`, so a new setting (e.g. Vaultwarden's `ADMIN_TOKEN`) must be added there as well as in `.env`.
 
 4. **Generate Tailscale Auth Key:**
    1. Log in to the Tailscale Admin Console.
    2. Navigate to _Settings_ -> _Keys_ and generate a one-time Auth Key.
    3. Open the `.env` file (e.g., `nano .env`) and paste the key into the `TS_AUTHKEY` variable.
 
-5. **Start the server:** Spin up the containers in detached mode:
+5. **Local backups only:** skip this step if you set `S3_BUCKET`. The scheduler runs as user `1000`, but Docker would create a missing `./backups` directory as `root`, and every backup would fail with a permission error. Create it first:
+   ```bash
+   mkdir -p backups && sudo chown 1000:1000 backups
+   ```
+
+6. **Start the server:** Spin up the containers in detached mode:
    ```bash
    docker compose up -d
    ```
    Check your Tailscale Admin Console to verify that the new machine named `homelab` is active and connected.
 
-6. **Configure HTTPS (Tailscale Serve):** Vaultwarden shares the network stack with Tailscale, meaning it is visible to the VPN container on the local port 80. To enable HTTPS, configure the `tailscale serve` feature inside the running container by executing:
+7. **Configure HTTPS (Tailscale Serve):** Vaultwarden shares the network stack with Tailscale, meaning it is visible to the VPN container on the local port 80. To enable HTTPS, configure the `tailscale serve` feature inside the running container by executing:
    ```bash
    docker exec -it tailscale tailscale serve --bg 80
    ```
    > **Note:** This configuration is automatically saved inside the mounted `./ts-data` directory, so it will persist across Raspberry Pi reboots.
 
-7. **Get your secure URL:** To find your private, secure HTTPS URL with a valid SSL certificate, run:
+8. **Get your secure URL:** To find your private, secure HTTPS URL with a valid SSL certificate, run:
    ```bash
    docker exec -it tailscale tailscale serve status
    ```
    The console will output your generated address (e.g., `https://homelab.your-tailnet.ts.net`).
 
-8. **User Registration & Hardening:**
+9. **User Registration & Hardening:**
    1. Ensure Tailscale is running on your computer or phone.
    2. Open the HTTPS URL you retrieved in the previous step in your browser.
    3. Create your account and verify that you can log in successfully.
@@ -81,19 +88,31 @@ The `scheduler` container runs a Python-based backup scheduler daemon that autom
 | `attachments/`   | File attachments (if present)                         |
 | `sends/`         | Send files (if present)                               |
 
-All items are packaged into a single `.7z` archive named `backup.YYYY-MM-DD-HHMM.7z`. When the `ARCHIVE_PASSWORD` environment variable is set, the archive is **password-protected and header-encrypted**. Without it, an unencrypted archive is created (not recommended).
+All items are packaged into a single `.7z` archive named `backup.YYYY-MM-DD-HHMM.7z`. The archive is always **password-protected and header-encrypted** with `ARCHIVE_PASSWORD` (required, at least 14 characters; the scheduler refuses to start without it).
 
 The backup scheduler daemon runs at **specific, customizable times of the day** (default: `02:00, 06:00, 10:00, 14:00, 18:00, 22:00`) and uploads the same archive to the appropriate retention tiers:
 
 - `daily/` — on every scheduled run
-- `weekly/` — additionally on the **first scheduled run** of the day on Mondays
-- `monthly/` — additionally on the **first scheduled run** of the day on the first day of each month
+- `weekly/` — additionally on the **first scheduled run of the day** on Mondays
+- `monthly/` — additionally on the **first scheduled run of the day** on the first day of each month
+
+### Retention
+
+- **Local filesystem** — after each upload the scheduler deletes files older than the retention period from that subdirectory. The newest file in a subdirectory is never deleted. Defaults, configurable in `.env`:
+
+  | Variable                 | Default | Applies to  |
+  |--------------------------|---------|-------------|
+  | `RETENTION_DAILY_DAYS`   | `7`     | `daily/`    |
+  | `RETENTION_WEEKLY_DAYS`  | `35`    | `weekly/`   |
+  | `RETENTION_MONTHLY_DAYS` | `365`   | `monthly/`  |
+
+- **AWS S3** — the scheduler **never deletes** anything from the bucket. Configure [lifecycle rules](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html) on the bucket instead: one expiration rule per prefix (`<S3_PREFIX>/daily/`, `<S3_PREFIX>/weekly/`, `<S3_PREFIX>/monthly/`, default prefix `vaultwarden`), with the same periods as above.
 
 ### Storage backends
 
 The scheduler supports two storage backends, selected automatically based on the environment configuration:
 
-- **Local filesystem** *(default)* — archives are stored in subdirectories `./backups/daily/`, `./backups/weekly/`, and `./backups/monthly/` (the `./backups/` directory is mounted inside the container). Used when `S3_BUCKET` is **not** set.
+- **Local filesystem** *(default)* — archives are stored in subdirectories `./backups/daily/`, `./backups/weekly/`, and `./backups/monthly/` (the `./backups/` directory is mounted inside the container and must be created first, see deployment step 5). Used when `S3_BUCKET` is **not** set.
 - **AWS S3** — archives are uploaded directly to an S3 bucket. Activated when `S3_BUCKET` is set.
 
 ### Monitoring (optional)

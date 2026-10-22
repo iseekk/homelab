@@ -13,10 +13,11 @@ from scheduler.main import create_monitor, create_storage, main, schedule_backup
 
 def make_config(**overrides: object) -> Config:
     fields: dict[str, object] = {
+        "archive_password": SecretStr("super-secret-password"),
         "local_backup_dir": Path("/tmp/backups"),
     }
     fields.update(overrides)
-    return Config.model_construct(**fields)  # type: ignore[arg-type]
+    return Config(**fields)  # type: ignore[arg-type]
 
 
 @pytest.fixture
@@ -24,7 +25,7 @@ def mock_config(mocker: MockerFixture) -> MagicMock:
     mock_cls = mocker.patch("scheduler.main.Config")
     config: MagicMock = mock_cls.return_value
     config.s3_bucket = None
-    config.local_backup_dir = "/tmp/backups"
+    config.local_backup_dir = Path("/tmp/backups")
     config.resolved_backup_times = ["02:00"]
     return config
 
@@ -69,14 +70,17 @@ def test_create_storage_uses_local(mocker: MockerFixture) -> None:
 
     create_storage(config)
 
-    mock_local.assert_called_once_with(remote_dir=Path("/tmp/backups"))
+    mock_local.assert_called_once_with(
+        remote_dir=Path("/tmp/backups"),
+        retention_days={"daily": 7, "weekly": 35, "monthly": 365},
+    )
 
 
 # -- create_monitor --
 
 
 def test_create_monitor_uses_healthchecks(mocker: MockerFixture) -> None:
-    config = Config.model_validate({"healthchecks_ping_url": "https://hc-ping.com/uuid"})
+    config = make_config(healthchecks_ping_url="https://hc-ping.com/uuid")
     mock_healthchecks = mocker.patch("scheduler.main.HealthchecksMonitor")
 
     create_monitor(config)
@@ -118,8 +122,8 @@ def test_schedule_backup_jobs_schedules_one_job_per_time(mock_config: MagicMock,
     assert mock_schedule.every.return_value.day.at.return_value.do.call_count == 3
 
 
-def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: MagicMock, mocker: MockerFixture) -> None:
-    # sorted: 02:00 first → include_extended=True; 06:00, 14:00 → False
+def test_schedule_backup_jobs_first_job_is_first_run_of_day(mock_config: MagicMock, mocker: MockerFixture) -> None:
+    # sorted: 02:00 first → is_first_run_of_day=True; 06:00, 14:00 → False
     mock_config.resolved_backup_times = ["06:00", "02:00", "14:00"]
     mocker.patch("scheduler.main.create_storage")
     mocker.patch("scheduler.main.create_monitor")
@@ -128,9 +132,9 @@ def test_schedule_backup_jobs_first_job_has_extended_retention(mock_config: Magi
     schedule_backup_jobs()
 
     do_calls = mock_schedule.every.return_value.day.at.return_value.do.call_args_list
-    extended_flags = [call.kwargs["include_extended"] for call in do_calls]
-    assert extended_flags.count(True) == 1
-    assert extended_flags.count(False) == 2
+    first_run_flags = [call.kwargs["is_first_run_of_day"] for call in do_calls]
+    assert first_run_flags.count(True) == 1
+    assert first_run_flags.count(False) == 2
 
 
 def test_job_runs_backup_when_healthchecks_ping_raises_value_error(

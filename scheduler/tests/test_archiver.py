@@ -15,11 +15,13 @@ from scheduler.config import Config
 
 FROZEN_NOW = "2026-06-12 12:00:00"  # Friday, 12th day of month
 FROZEN_DT = datetime(2026, 6, 12, 12, 0, 0)
+PASSWORD = "super-secret-password"
 
 
 def make_config(tmp_path: Path, **overrides: object) -> Config:
     fields: dict[str, object] = {
         "data_dir": tmp_path / "data",
+        "archive_password": SecretStr(PASSWORD),
         "local_backup_dir": tmp_path / "backups",
     }
     fields.update(overrides)
@@ -35,9 +37,9 @@ def make_archiver(tmp_path: Path, **config_overrides: object) -> VaultwardenArch
 
 
 @pytest.mark.parametrize(
-    "now,include_extended,expected",
+    ("now", "is_first_run_of_day", "expected"),
     [
-        # include_extended=False always → only daily
+        # is_first_run_of_day=False always → only daily
         (datetime(2026, 6, 1, 12, 0), False, ["daily"]),
         # Wednesday, 3rd → no extra dirs
         (datetime(2026, 6, 3, 12, 0), True, ["daily"]),
@@ -49,8 +51,8 @@ def make_archiver(tmp_path: Path, **config_overrides: object) -> VaultwardenArch
         (datetime(2026, 6, 1, 12, 0), True, ["daily", "weekly", "monthly"]),
     ],
 )
-def test_get_retention_sub_dirs(now: datetime, include_extended: bool, expected: list[str]) -> None:
-    assert get_retention_sub_dirs(now, include_extended) == expected
+def test_get_retention_sub_dirs(now: datetime, is_first_run_of_day: bool, expected: list[str]) -> None:
+    assert get_retention_sub_dirs(now, is_first_run_of_day) == expected
 
 
 # -- VaultwardenArchiver.backup_sqlite --
@@ -174,7 +176,7 @@ def test_package_returns_none_when_empty(tmp_path: Path) -> None:
     assert archiver.package(temp_dir) is None
 
 
-def test_package_creates_archive_without_password(tmp_path: Path) -> None:
+def test_package_creates_encrypted_archive(tmp_path: Path) -> None:
     archiver = make_archiver(tmp_path)
     temp_dir = tmp_path / "temp"
     temp_dir.mkdir()
@@ -183,21 +185,7 @@ def test_package_creates_archive_without_password(tmp_path: Path) -> None:
     result = archiver.package(temp_dir)
 
     assert result is not None
-    assert result.suffix == ".7z"
-    with py7zr.SevenZipFile(result, mode="r") as archive:
-        assert "file.txt" in archive.getnames()
-
-
-def test_package_creates_encrypted_archive(tmp_path: Path) -> None:
-    archiver = make_archiver(tmp_path, archive_password=SecretStr("secret"))
-    temp_dir = tmp_path / "temp"
-    temp_dir.mkdir()
-    (temp_dir / "file.txt").write_bytes(b"hello")
-
-    result = archiver.package(temp_dir)
-
-    assert result is not None
-    with py7zr.SevenZipFile(result, mode="r", password="secret") as archive:
+    with py7zr.SevenZipFile(result, mode="r", password=PASSWORD) as archive:
         assert "file.txt" in archive.getnames()
 
 
@@ -209,7 +197,7 @@ def test_run_backup_raises_when_data_dir_missing(mocker: MockerFixture, tmp_path
     config = make_config(tmp_path)  # data_dir not created
     storage = mocker.MagicMock()
     with pytest.raises(FileNotFoundError, match="Data directory does not exist"):
-        run_backup(config, storage, include_extended=False)
+        run_backup(config, storage, is_first_run_of_day=False)
 
 
 @freeze_time("2026-06-01 12:00:00")  # Monday AND 1st of month → daily + weekly + monthly
@@ -218,10 +206,10 @@ def test_run_backup_uploads_for_each_sub_dir(mocker: MockerFixture, tmp_path: Pa
     data_dir.mkdir()
     (data_dir / "db.sqlite3").write_bytes(b"")
 
-    config = make_config(tmp_path, archive_password=None)
+    config = make_config(tmp_path)
     storage = mocker.MagicMock()
 
-    run_backup(config, storage, include_extended=True)
+    run_backup(config, storage, is_first_run_of_day=True)
 
     call_remote_names = [call.kwargs["remote_name"] for call in storage.upload.call_args_list]
     assert any(n.startswith("daily/") for n in call_remote_names)
@@ -238,6 +226,6 @@ def test_run_backup_raises_and_uploads_nothing_when_db_missing(mocker: MockerFix
     storage = mocker.MagicMock()
 
     with pytest.raises(FileNotFoundError, match="SQLite database file does not exist"):
-        run_backup(config, storage, include_extended=False)
+        run_backup(config, storage, is_first_run_of_day=False)
 
     storage.upload.assert_not_called()
