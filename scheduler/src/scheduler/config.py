@@ -35,7 +35,7 @@ class Config(BaseSettings):
 
     # Schedule
     backup_times: str = Field(
-        default="02:00, 06:00, 10:00, 14:00, 18:00, 22:00",
+        default="00:15, 04:15, 08:15, 12:15, 16:15, 20:15",
         description="Comma-separated list of times (HH:MM) to run the backup",
     )
 
