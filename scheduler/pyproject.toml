@@ -4,10 +4,10 @@ version = "0.1.0"
 description = "Automated Vaultwarden backup scheduler."
 requires-python = ">=3.14"
 dependencies = [
-    "boto3==1.43.118",
-    "boto3-stubs[s3]==1.43.118",
+    "boto3==1.43.120",
+    "boto3-stubs[s3]==1.43.120",
     "pydantic==2.14.1",
-    "pydantic-settings==2.16.1",
+    "pydantic-settings==2.16.2",
     "py7zr==1.1.4",
     "schedule==1.2.2",
 ]
@@ -23,10 +23,10 @@ packages = ["src/scheduler"]
 dev = [
     "freezegun==1.5.5",
     "mypy==2.4.0",
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-cov==7.1.0",
     "pytest-mock==3.17.0",
-    "ruff==0.17.2",
+    "ruff==0.17.3",
 ]
 
 [tool.ruff]
