@@ -40,6 +40,7 @@ This is how the directory structure should look in your main folder (e.g., on an
    1. Log in to the Tailscale Admin Console.
    2. Navigate to _Settings_ -> _Keys_ and generate a one-time Auth Key.
    3. Open the `.env` file (e.g., `nano .env`) and paste the key into the `TS_AUTHKEY` variable.
+   4. Optionally, set `TS_EXTRA_ARGS` to pass extra flags to `tailscale up` (e.g. `--advertise-exit-node`).
 
 5. **Local backups only:** skip this step if you set `S3_BUCKET`. The scheduler runs as user `1000`, but Docker would create a missing `./backups` directory as `root`, and every backup would fail with a permission error. Create it first:
    ```bash
