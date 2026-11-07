@@ -16,6 +16,7 @@ services:
       - TZ
       - TS_AUTHKEY
       - TS_STATE_DIR
+      - TS_EXTRA_ARGS
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:

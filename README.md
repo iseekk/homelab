@@ -40,6 +40,7 @@ This is how the directory structure should look in your main folder (e.g., on an
    1. Log in to the Tailscale Admin Console.
    2. Navigate to _Settings_ -> _Keys_ and generate a one-time Auth Key.
    3. Open the `.env` file (e.g., `nano .env`) and paste the key into the `TS_AUTHKEY` variable.
+   4. Optionally, set `TS_EXTRA_ARGS` to pass extra flags to `tailscale up` (e.g. `--advertise-exit-node`).
 
 5. **Local backups only:** skip this step if you set `S3_BUCKET`. The scheduler runs as user `1000`, but Docker would create a missing `./backups` directory as `root`, and every backup would fail with a permission error. Create it first:
    ```bash
@@ -93,7 +94,7 @@ The `scheduler` container runs a Python-based backup scheduler daemon that autom
 
 All items are packaged into a single `.7z` archive named `backup.YYYY-MM-DD-HHMM.7z`. The archive is always **password-protected and header-encrypted** with `ARCHIVE_PASSWORD` (required, at least 14 characters; the scheduler refuses to start without it).
 
-The backup scheduler daemon runs at **specific, customizable times of the day** (default: `02:00, 06:00, 10:00, 14:00, 18:00, 22:00`) and uploads the same archive to the appropriate retention tiers:
+The backup scheduler daemon runs at **specific, customizable times of the day** (default: `00:15, 04:15, 08:15, 12:15, 16:15, 20:15`) and uploads the same archive to the appropriate retention tiers:
 
 - `daily/` — on every scheduled run
 - `weekly/` — additionally on the **first scheduled run of the day** on Mondays
