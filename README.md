@@ -93,7 +93,7 @@ The `scheduler` container runs a Python-based backup scheduler daemon that autom
 
 All items are packaged into a single `.7z` archive named `backup.YYYY-MM-DD-HHMM.7z`. The archive is always **password-protected and header-encrypted** with `ARCHIVE_PASSWORD` (required, at least 14 characters; the scheduler refuses to start without it).
 
-The backup scheduler daemon runs at **specific, customizable times of the day** (default: `02:00, 06:00, 10:00, 14:00, 18:00, 22:00`) and uploads the same archive to the appropriate retention tiers:
+The backup scheduler daemon runs at **specific, customizable times of the day** (default: `00:15, 04:15, 08:15, 12:15, 16:15, 20:15`) and uploads the same archive to the appropriate retention tiers:
 
 - `daily/` — on every scheduled run
 - `weekly/` — additionally on the **first scheduled run of the day** on Mondays
